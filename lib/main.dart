@@ -67,14 +67,28 @@ class Notes extends StatelessWidget {
             // Handle long press
           },
           child: Container(
-            height: 50,
+            margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            padding: EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: Offset(0, 2), // changes position of shadow
+                ),
+              ],
             ),
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(15),
-            child: Text(notes[index].title!),
+            child: Text(
+              notes[index].title!,
+              style: TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
           ),
         );
       },
@@ -156,6 +170,7 @@ class NewNotePage extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           controller.addNoteToDB();
+          Get.back();
         },
         label: const Text(
           "Save Note",
@@ -210,12 +225,14 @@ class EditNotePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final NoteController controller = Get.put(NoteController()); // Initialize NoteController
     final int index = Get.arguments ?? 0; // Get index from arguments
+    controller.titleController.text = controller.notes[index].title!;
+    controller.contentController.text = controller.notes[index].content!;
     // final Note note = Get.find<NoteController>().notes[index]; // Get note by index
     // controller.titleController.text = note.title; // Populate title field
     // controller.contentController.text = note.content; // Populate content field
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Note $index'), // Display note index in title
+        title: Text('Edit Note ${controller.notes[index].title!}'), // Display note index in title
       ),
       body: SingleChildScrollView(
         child: Container(
@@ -245,7 +262,7 @@ class EditNotePage extends StatelessWidget {
         onPressed: () {
         },
         label: const Text(
-          "Save Note",
+          "Update Note",
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,

@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../model/note_model.dart';
 
 class DBHelper {
@@ -17,21 +18,28 @@ class DBHelper {
   }
 
   Future<Database> initiateDatabase() async {
-    Directory directory = await getApplicationDocumentsDirectory();
-    String path = join(directory.path, _dbName);
-    var database = await openDatabase(path, version: 1, onCreate: _createDB);
+    sqfliteFfiInit();
+    // Get the application documents directory
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    // Build the path for the database file
+    String path = join(documentsDirectory.path, _dbName);
+    // Initialize sqflite ffi databaseFactory
+    var databaseFactory = databaseFactoryFfi;
+    // Open the database or create it if it doesn't exist
+    var database = await databaseFactory.openDatabase(path);
+    // Create the table if it doesn't exist
+    _createDB(database, 1);
     return database;
   }
 
   void _createDB(Database db, int version) async {
-    await db.execute(
-      '''CREATE TABLE $_tableName(
-         id INTEGER PRIMARY KEY AUTOINCREMENT,
-         title TEXT,
-         content TEXT
-       )
-      '''
-    );
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_tableName(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        content TEXT
+      )
+    ''');
   }
 
   Future<int> insert(Note note) async {
@@ -53,8 +61,12 @@ class DBHelper {
 
   Future<int> update(Note note) async {
     Database db = await this.database;
-    var result = await db.update(_tableName, note.toJson(),
-        where: "id = ?", whereArgs: [note.id]);
+    var result = await db.update(
+      _tableName,
+      note.toJson(),
+      where: "id = ?",
+      whereArgs: [note.id],
+    );
     return result;
   }
 
