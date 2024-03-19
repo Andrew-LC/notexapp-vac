@@ -9,37 +9,28 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
+  
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'Flutter Demo',
       theme: ThemeData(
-        useMaterial3: true,
+        brightness: Brightness.dark, // Set dark theme
+        primaryColor: Colors.black, // Set primary color
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.black.withOpacity(0.8), // Set app bar background color with opacity
+        ),
+        textTheme: TextTheme(
+          bodyText1: TextStyle(color: Colors.white), // Set text color
+          bodyText2: TextStyle(color: Colors.white), // Set text color
+        ),
       ),
       unknownRoute: GetPage(name: '/notfound', page: () => const UnknownRoutePage()),
-      initialRoute: '/',
+      initialRoute: '/home',
       getPages: [
-        GetPage(name: '/', page: () => const HomePage()),
+        GetPage(name: '/home', page: () => const HomePage()),
         GetPage(name: '/newnote', page: () => const NewNotePage()),
         GetPage(name: '/editnote', page: () => const EditNotePage()),
       ],
-    );
-  }
-}
-
-class SearchBar extends StatelessWidget {
-  const SearchBar({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        decoration: InputDecoration(
-          labelText: 'Search notes',
-          border: OutlineInputBorder(),
-          prefixIcon: const Icon(Icons.search),
-        ),
-      ),
     );
   }
 }
@@ -50,9 +41,13 @@ class Notes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final NoteController controller = Get.put(NoteController()); // Initialize NoteController
     if (notes.isEmpty) {
       return Center(
-        child: const Text("No notes found"),
+        child: const Text(
+          "No notes found",
+          style: TextStyle(color: Colors.white), // Set text color to white
+        ),
       );
     }
     return ListView.builder(
@@ -63,38 +58,50 @@ class Notes extends StatelessWidget {
           onTap: () {
             Get.toNamed("/editnote", arguments: index); // Pass index as argument
           },
-          onLongPress: () {
-            // Handle long press
-          },
-          child: Container(
-            margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            padding: EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 4,
-                  offset: Offset(0, 2), // changes position of shadow
-                ),
-              ],
+          child: Dismissible(
+            key: Key(notes[index].id.toString()),
+            onDismissed: (direction) {
+              controller.deleteNoteFromDB(notes[index].id!);
+            },
+            background: Container(
+              color: Colors.red,
+              child: const Icon(
+                Icons.delete,
+                color: Colors.white,
+                size: 30,
+              ),
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
             ),
-            child: Text(
-              notes[index].title!,
-              style: TextStyle(
-                fontSize: 16.0,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+            child: Card(
+              color: Colors.black.withOpacity(0.8),
+              child: ListTile(
+                title: Text(
+                  notes[index].title!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text(
+                  notes[index].content!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
-          ),
+          )
         );
       },
     );
   }
 }
+
 
 
 class HomePage extends StatelessWidget {
@@ -103,24 +110,37 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final NoteController controller = Get.put(NoteController()); // Initialize NoteController
-    print("Notes: ${controller.notes}");
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("NotexApp"),
+        title: const Text(
+          "NotexApp",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        leading: const Icon(
+          Icons.note,
+          color: Colors.white,
+        ),
+        backgroundColor: Colors.black.withOpacity(0.8),
       ),
       body: Column(
         children: <Widget>[
-          const SearchBar(),
           const SizedBox(height: 8), // Add spacing between SearchBar and Notes
           Expanded(
-            child: Notes(notes: controller.notes),
+            child: GetBuilder<NoteController>(
+              builder: (_) => Notes(notes: controller.notes),
+            ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Get.toNamed("/newnote");
+          controller.refreshPage();
         },
         tooltip: 'Add new note',
         child: const Icon(Icons.note_add),
@@ -170,7 +190,7 @@ class NewNotePage extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           controller.addNoteToDB();
-          Get.back();
+          controller.refreshPage();
         },
         label: const Text(
           "Save Note",
@@ -201,7 +221,8 @@ class NewNotePage extends StatelessWidget {
         fontSize: fontSize,
         fontWeight: fontWeight,
       ),
-      cursorColor: Colors.black,
+      cursorColor: Colors.purple,
+      cursorWidth: 4.0,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(
@@ -260,6 +281,13 @@ class EditNotePage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
+          controller.updateNoteInDB(
+            Note(
+              id: controller.notes[index].id,
+              title: controller.titleController.text,
+              content: controller.contentController.text,
+            ),
+          );
         },
         label: const Text(
           "Update Note",
@@ -289,7 +317,8 @@ class EditNotePage extends StatelessWidget {
         fontSize: fontSize,
         fontWeight: fontWeight,
       ),
-      cursorColor: Colors.black,
+      cursorColor: Colors.purple,
+      cursorWidth: 4.0,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(
@@ -299,6 +328,7 @@ class EditNotePage extends StatelessWidget {
         border: InputBorder.none,
       ),
       autofocus: true,
+      maxLines: null,
     );
   }
 }
